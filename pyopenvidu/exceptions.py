@@ -37,3 +37,22 @@ class OpenViduStreamError(OpenViduConnectionError):
 
 class OpenViduStreamDoesNotExistsError(OpenViduStreamError):
     pass
+
+# Recording errors
+
+class OpenViduRecordingError(OpenViduSessionError):
+    pass
+
+
+class OpenViduRecordingDoesNotExistsError(OpenViduRecordingError):
+    pass
+
+class OpenViduRecordingNotStoppedError(OpenViduRecordingError):
+    pass
+
+class OpenViduRecordingNotEnabledError(OpenViduRecordingError):
+    pass
+
+class OpenViduRecordingNotStartedError(OpenViduRecordingError):
+    pass
+

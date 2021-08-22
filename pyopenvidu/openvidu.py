@@ -8,7 +8,9 @@ from requests_toolbelt import user_agent
 
 from . import __version__
 from .exceptions import OpenViduSessionDoesNotExistsError, OpenViduSessionExistsError
+from .exceptions import OpenViduRecordingDoesNotExistsError
 from .openvidusession import OpenViduSession
+from .openvidurecording import OpenViduRecording
 
 
 class OpenVidu(object):
@@ -16,7 +18,7 @@ class OpenVidu(object):
     This object represents a OpenVidu server instance.
     """
 
-    def __init__(self, url: str, secret: str, initial_fetch: bool = True, timeout: Union[int, tuple, None] = None):
+    def __init__(self, url: str, secret: str, initial_fetch: bool = True, recording_enabled: bool = False, timeout: Union[int, tuple, None] = None):
         """
         :param url: The url to reach your OpenVidu Server instance. Typically something like https://localhost:4443/
         :param secret: Secret for your OpenVidu Server
@@ -33,10 +35,14 @@ class OpenVidu(object):
         self._session.request = partial(self._session.request, timeout=timeout)
 
         self._openvidu_sessions = {}  # id:object
+        self._openvidu_recordings = {}  # id:object
 
         self._last_fetch_result = {}  # Used only to calculate the return value of the fetch() call
+        self._last_fetch_result_recordings = {}
         if initial_fetch:
             self.fetch()  # initial fetch
+            if recording_enabled:
+                self.fetch_recordings()
 
     def fetch(self) -> bool:
         """
@@ -151,3 +157,92 @@ class OpenVidu(object):
         r.raise_for_status()
 
         return r.json()
+
+    def create_recording(self, session_id, options:dict = {}) -> dict:
+        """
+        Start recording
+        
+        https://docs.openvidu.io/en/2.19.0/reference-docs/REST-API/#post-openviduapirecordingsstart
+
+        """
+        session = self.get_session(session_id)
+        parameters = {
+            "session":session_id,
+            "name": "MyRecording",
+            "hasAudio": True,
+            "hasVideo": True,
+            "outputMode": "INDIVIDUAL", #"COMPOSED",
+            "resolution": "640x480",
+            "frameRate": 25,
+            "ignoreFailedStreams": True,
+            }
+        parameters.update(options)
+        r = self._session.post(f'recordings/start', json=parameters)
+
+        if r.status_code == 404:
+            session.is_valid = False
+            raise OpenViduSessionDoesNotExistsError()
+        r.raise_for_status()
+
+        new_recording = OpenViduRecording(self._session, r.json())
+        self._openvidu_recordings[new_recording.id] = new_recording
+
+        return new_recording
+
+    def fetch_recordings(self) -> dict:
+        """
+        Get all recordings
+
+        """
+        r = self._session.get(f'recordings')
+        r.raise_for_status()
+        new_data = r.json()['items']
+
+        data_changed = new_data != self._last_fetch_result_recordings
+        self._last_fetch_result_recordings = new_data
+
+        if data_changed:
+            self._openvidu_recordings = {}
+
+            # update, create valid streams
+            for recording_data in new_data:
+                recording_id = recording_data['id']
+                self._openvidu_recordings[recording_id] = OpenViduRecording(self._session, recording_data)
+
+        return data_changed
+
+    @property
+    def recordings(self) -> List[OpenViduRecording]:
+        """
+        Get a list of currently active recordings to the server.
+
+        :return: A list of OpenViduRecording objects.
+        """
+        return [
+            recording for recording in self._openvidu_recordings.values() if recording.is_valid
+        ]
+
+    def get_recording(self, recording_id: str) -> OpenViduRecording:
+        """
+        Get a currently active recording to the server.
+
+        :param recording_id: The ID of the recording to acquire.
+        :return: An OpenViduRecording object.
+        """
+        if recording_id not in self._openvidu_recordings:
+            raise OpenViduRecordingDoesNotExistsError()
+
+        recording = self._openvidu_recordings[recording_id]
+
+        if not recording.is_valid:
+            raise OpenViduRecordingDoesNotExistsError()
+
+        return recording
+
+    def get_session_recordings(self, session_id: str) -> OpenViduRecording:
+        recordings = []
+        for recording in self._openvidu_recordings.values():
+            if recording.session_id == session_id:
+                if recording.is_valid:
+                    recordings.append(recording)
+        return recordings
