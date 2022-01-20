@@ -12,7 +12,7 @@ class OpenViduRecording(object):
     """
     This is a base class for recording objects.
 
-    https://docs.openvidu.io/en/2.19.0/reference-docs/REST-API/#the-recording-object
+    https://docs.openvidu.io/en/2.20.0/reference-docs/REST-API/#the-recording-object
 
     """
 
@@ -30,11 +30,10 @@ class OpenViduRecording(object):
     size: int
     duration: float
     url: str
-    status: str # starting, started, stopped, ready, failed
+    status: str  # starting, started, stopped, ready, failed
     is_valid: bool
 
     def _update_from_data(self, data: dict):
-        print('Recording:', data)
         # set property
         self.id = data['id']
         self.name = data['name']
@@ -51,16 +50,22 @@ class OpenViduRecording(object):
         self.duration = data['duration']
         self.url = data['url']
         self.status = data['status']
-        #self.server_data = data.get('serverData', None)
+        # self.server_data = data.get('serverData', None)
         self.is_valid = True
 
-    def __init__(self, session: BaseUrlSession, data: dict):
+    def __init__(
+        self,
+        session: BaseUrlSession,
+        data: dict,
+        verify_request_ssl: bool = True
+    ) -> None:
         """
         This is meant for internal use, thus you should not call it.
         Use `OpenViduSession.connections` to get an instance of this class.
         """
 
         self._session = session
+        self._session.verify = verify_request_ssl
         self._update_from_data(data)
         self._last_fetch_result = data
 
@@ -68,7 +73,8 @@ class OpenViduRecording(object):
         """
         Updates every property of the connection object.
 
-        :return: true if the Connection object status has changed with respect to the server, false if not. This applies to any property or sub-property of the object.
+        :return: true if the Connection object status has changed with respect to the server,
+        false if not. This applies to any property or sub-property of the object.
         """
 
         if not self.is_valid:

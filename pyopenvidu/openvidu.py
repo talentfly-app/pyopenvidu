@@ -18,15 +18,33 @@ class OpenVidu(object):
     This object represents a OpenVidu server instance.
     """
 
-    def __init__(self, url: str, secret: str, initial_fetch: bool = True, recording_enabled: bool = False, timeout: Union[int, tuple, None] = None):
+    def __init__(
+        self,
+        url: str,
+        secret: str,
+        initial_fetch: bool = True,
+        recording_enabled: bool = False,
+        timeout: Union[int, tuple, None] = None,
+        verify_request_ssl: bool = True
+    ) -> None:
         """
         :param url: The url to reach your OpenVidu Server instance. Typically something like https://localhost:4443/
         :param secret: Secret for your OpenVidu Server
-        :param initial_fetch: Enable the initial fetching on object creation. Defaults to `True`. If set to `False` a `fetc()` must be called before doing anything with the object. In most scenarios you won't need to change this.
-        :param timeout: Set timeout to all Requests to the OpenVidu server. Default: None = No timeout. See https://2.python-requests.org/en/latest/user/advanced/#timeouts for possible values.
+        :param initial_fetch: Enable the initial fetching on object creation. Defaults to `True`.
+                              If set to `False` a `fetch()` must be called before doing anything with the object.
+                              In most scenarios you won't need to change this.
+        :param timeout: Set timeout to all Requests to the OpenVidu server. Default: None = No timeout.
+                        See https://2.python-requests.org/en/latest/user/advanced/#timeouts for possible values.
+        :param verify_request_ssl: Defaults to `True`,
+                                   requiring requests to verify the TLS certificate at the remote end.
+                                   If verify is set to `False`, requests will accept any TLS certificate
+                                   presented by the server, and will ignore hostname mismatches and/or
+                                   expired certificates, which will make your application vulnerable to
+                                   man-in-the-middle (MitM) attacks. Only set this to `False` for testing
         """
         self._session = BaseUrlSession(base_url=url)
         self._session.auth = HTTPBasicAuth('OPENVIDUAPP', secret)
+        self._session.verify = verify_request_ssl
 
         self._session.headers.update({
             'User-Agent': user_agent('PyOpenVidu', __version__)
@@ -39,6 +57,7 @@ class OpenVidu(object):
 
         self._last_fetch_result = {}  # Used only to calculate the return value of the fetch() call
         self._last_fetch_result_recordings = {}
+
         if initial_fetch:
             self.fetch()  # initial fetch
             if recording_enabled:
@@ -46,12 +65,14 @@ class OpenVidu(object):
 
     def fetch(self) -> bool:
         """
-        Updates every property of every active Session with the current status they have in OpenVidu Server. After calling this method you can access the updated list of active sessions trough the `sessions` property.
+        Updates every property of every active Session with the current status they have in OpenVidu Server.
+        After calling this method you can access the updated list of active sessions trough the `sessions` property.
 
-        :return: true if the Session status has changed with respect to the server, false if not. This applies to any property or sub-property of the object.
+        :return: true if the Session status has changed with respect to the server, false if not.
+                 This applies to any property or sub-property of the object.
         """
 
-        r = self._session.get("sessions")
+        r = self._session.get('sessions')
         r.raise_for_status()
         new_data = r.json()['content']
 
@@ -89,19 +110,20 @@ class OpenVidu(object):
         """
         Creates a new OpenVidu session.
 
-        This method calls fetch() automatically since the server does not return the proper data to construct the OpenViduSession object.
+        This method calls fetch() automatically since the server does not return the proper data
+        to construct the OpenViduSession object.
 
-        https://docs.openvidu.io/en/2.16.0/reference-docs/REST-API/#post-openviduapisessions
+        https://docs.openvidu.io/en/2.20.0/reference-docs/REST-API/#post-session
 
         :param custom_session_id: You can fix the sessionId that will be assigned to the session with this parameter.
         :param media_mode: ROUTED (default) or RELAYED
         :return: The created OpenViduSession instance.
         """
         # Prepare parameters
-        if media_mode not in ['ROUTED', 'RELAYED', None]:
-            raise ValueError(f"media_mode must be any of ROUTED or RELAYED, not {media_mode}")
+        if media_mode not in ('ROUTED', 'RELAYED', None):
+            raise ValueError(f'media_mode must be any of ROUTED or RELAYED, not {media_mode}')
 
-        parameters = {"mediaMode": media_mode, "customSessionId": custom_session_id}
+        parameters = {'mediaMode': media_mode, 'customSessionId': custom_session_id}
         parameters = {k: v for k, v in parameters.items() if v is not None}
 
         # send request
@@ -114,7 +136,7 @@ class OpenVidu(object):
 
         r.raise_for_status()
 
-        # As of OpenVidu 2.16.0 the server returns the created session object
+        # As of OpenVidu 2.20.0 the server returns the created session object
         new_session = OpenViduSession(self._session, r.json())
         self._openvidu_sessions[new_session.id] = new_session
 
@@ -147,7 +169,7 @@ class OpenVidu(object):
         Unlike session related calls. This call does not require prior calling of the fetch() method.
         Using this function will always result an API call to the backend.
 
-        https://docs.openvidu.io/en/2.16.0/reference-docs/REST-API/#get-openviduapiconfig
+        https://docs.openvidu.io/en/2.20.0/reference-docs/REST-API/#get-config
 
         :return: The exact response from the server as a dict.
         """
@@ -158,23 +180,24 @@ class OpenVidu(object):
 
         return r.json()
 
-    def create_recording(self, session_id, options:dict = {}) -> dict:
+    def create_recording(self, session_id, options: dict = None) -> OpenViduRecording:
         """
         Start recording
-        
-        https://docs.openvidu.io/en/2.19.0/reference-docs/REST-API/#post-openviduapirecordingsstart
+
+        https://docs.openvidu.io/en/2.20.0/reference-docs/REST-API/#post-recording-start
 
         """
+        options = options if options else {}
         session = self.get_session(session_id)
         parameters = {
-            "session":session_id,
-            "name": "MyRecording",
-            "hasAudio": True,
-            "hasVideo": True,
-            "outputMode": "INDIVIDUAL", #"COMPOSED",
-            "resolution": "640x480",
-            "frameRate": 25,
-            "ignoreFailedStreams": True,
+            'session': session_id,
+            'name': 'MyRecording',
+            'hasAudio': True,
+            'hasVideo': True,
+            'outputMode': 'INDIVIDUAL',  # "COMPOSED",
+            'resolution': '640x480',
+            'frameRate': 25,
+            'ignoreFailedStreams': True,
             }
         parameters.update(options)
         r = self._session.post(f'recordings/start', json=parameters)
@@ -239,7 +262,7 @@ class OpenVidu(object):
 
         return recording
 
-    def get_session_recordings(self, session_id: str) -> OpenViduRecording:
+    def get_session_recordings(self, session_id: str) -> List[OpenViduRecording]:
         recordings = []
         for recording in self._openvidu_recordings.values():
             if recording.session_id == session_id:

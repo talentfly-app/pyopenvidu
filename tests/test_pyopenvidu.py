@@ -21,7 +21,7 @@ def no_fetch_openvidu_instance():
 
 def test_get_config(openvidu_instance, requests_mock):
     original = {
-        "VERSION": "2.16.0",
+        "VERSION": "2.20.0",
         "DOMAIN_OR_PUBLIC_IP": "my.openvidu.ip",
         "HTTPS_PORT": 443,
         "OPENVIDU_PUBLICURL": "https://my.openvidu.ip",
@@ -33,7 +33,7 @@ def test_get_config(openvidu_instance, requests_mock):
         "OPENVIDU_SESSIONS_GARBAGE_INTERVAL": 900,
         "OPENVIDU_SESSIONS_GARBAGE_THRESHOLD": 3600,
         "OPENVIDU_RECORDING": True,
-        "OPENVIDU_RECORDING_VERSION": "2.16.0",
+        "OPENVIDU_RECORDING_VERSION": "2.20.0",
         "OPENVIDU_RECORDING_PATH": "/opt/openvidu/recordings/",
         "OPENVIDU_RECORDING_PUBLIC_ACCESS": False,
         "OPENVIDU_RECORDING_NOTIFICATION": "moderator",
@@ -105,7 +105,7 @@ def test_create_session(openvidu_instance, requests_mock):
 
     assert session.id == "TestSession3"
     assert a.called_once
-    assert not b.called  # A subsequent fetch should not be called (since 2.16.0)
+    assert not b.called  # A subsequent fetch should not be called (since 2.20.0)
 
     assert a.last_request.json() == {}
 
@@ -141,7 +141,7 @@ def test_create_session_extra(openvidu_instance, requests_mock):
 
     assert session.id == "DerpyIsBestPony"
     assert a.called_once
-    assert not b.called  # A subsequent fetch should not be called (since 2.16.0)
+    assert not b.called  # A subsequent fetch should not be called (since 2.20.0)
 
     assert a.last_request.json() == {"mediaMode": 'RELAYED', "customSessionId": 'DerpyIsBestPony'}
 
@@ -276,7 +276,7 @@ def test_fetching_changed(openvidu_instance, requests_mock):
         "createdAt": 1538481999022,
         "activeAt": 1538481999843,
         "platform": "Chrome 85.0.4183.102 on Linux 64-bit",
-        "token": "wss://localhost:4443?sessionId=TestSession&token=tok_AVe8o7iltWqtijyl&role=PUBLISHER&version=2.16.0&coturnIp=localhost&turnUsername=M2ALIY&turnCredential=7kfjy2",
+        "token": "wss://localhost:4443?sessionId=TestSession&token=tok_AVe8o7iltWqtijyl&role=PUBLISHER&version=2.20.0&coturnIp=localhost&turnUsername=M2ALIY&turnCredential=7kfjy2",
         "serverData": "My Server Data",
         "clientData": "",
         "record": False,
@@ -398,7 +398,7 @@ def test_new_session_proper_working_with_no_fetch(no_fetch_openvidu_instance, re
 
     assert session.id == "TestSession3"
     assert a.called_once
-    assert not b.called_once  # Nofetch (as of 2.16.0)
+    assert not b.called_once  # Nofetch (as of 2.20.0)
 
     assert a.last_request.json() == {}
 
@@ -434,7 +434,7 @@ def test_create_session_extra_proper_working_with_no_fetch(no_fetch_openvidu_ins
 
     assert session.id == "DerpyIsBestPony"
     assert a.called_once
-    assert not b.called  # A subsequent fetch should not be called (since 2.16.0)
+    assert not b.called  # A subsequent fetch should not be called (since 2.20.0)
 
     assert a.last_request.json() == {"mediaMode": 'RELAYED', "customSessionId": 'DerpyIsBestPony'}
 

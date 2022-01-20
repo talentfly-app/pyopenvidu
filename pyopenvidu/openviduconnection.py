@@ -8,7 +8,8 @@ from .openvidupublisher import OpenViduPublisher
 from .openvidusubscriber import OpenViduSubscriber
 
 
-# Notice: Frozen should be changed to True in later versions of Python3 where a nice method for custom initializer is implemented
+# Notice: Frozen should be changed to True in later versions of Python3
+# where a nice method for custom initializer is implemented
 @dataclass(init=False, frozen=False)
 class OpenViduConnection(object):
     """
@@ -59,13 +60,19 @@ class OpenViduConnection(object):
         self.is_valid = True
         # Specific properties will be set in the inherited functions
 
-    def __init__(self, session: BaseUrlSession, data: dict):
+    def __init__(
+        self,
+        session: BaseUrlSession,
+        data: dict,
+        verify_request_ssl: bool = True
+    ) -> None:
         """
         This is meant for internal use, thus you should not call it.
         Use `OpenViduSession.connections` to get an instance of this class.
         """
 
         self._session = session
+        self._session.verify = verify_request_ssl
         self._update_from_data(data)
         self._last_fetch_result = data
 
@@ -73,13 +80,14 @@ class OpenViduConnection(object):
         """
         Updates every property of the connection object.
 
-        :return: true if the Connection object status has changed with respect to the server, false if not. This applies to any property or sub-property of the object.
+        :return: True if the Connection object status has changed with respect to the server, False if not.
+                 This applies to any property or sub-property of the object.
         """
 
         if not self.is_valid:
             raise OpenViduConnectionDoesNotExistsError()
 
-        r = self._session.get(f"sessions/{self.session_id}/connection/{self.id}")
+        r = self._session.get(f'sessions/{self.session_id}/connection/{self.id}')
 
         if r.status_code == 404:
             self.is_valid = False
@@ -102,14 +110,15 @@ class OpenViduConnection(object):
     def force_disconnect(self):
         """
         Forces the disconnection from the session.
-        Remember to call fetch() after this call to fetch the current actual properties of the Session from OpenVidu Server!
+        Remember to call fetch() after this call to fetch the current actual properties of
+        the Session from OpenVidu Server!
 
-        https://docs.openvidu.io/en/2.16.0/reference-docs/REST-API/#delete-openviduapisessionsltsession_idgtconnectionltconnection_idgt
+        https://docs.openvidu.io/en/2.20.0/reference-docs/REST-API/#delete-connection
         """
         if not self.is_valid:
             raise OpenViduConnectionDoesNotExistsError()
 
-        r = self._session.delete(f"sessions/{self.session_id}/connection/{self.id}")
+        r = self._session.delete(f'sessions/{self.session_id}/connection/{self.id}')
         if r.status_code == 404:
             self.is_valid = False
             raise OpenViduConnectionDoesNotExistsError()
@@ -124,9 +133,11 @@ class OpenViduConnection(object):
         """
         Sends a signal to this connection.
 
-        https://docs.openvidu.io/en/2.16.0/reference-docs/REST-API/#post-openviduapisignal
+        https://docs.openvidu.io/en/2.20.0/reference-docs/REST-API/#post-signal
 
-        :param type_: Type of the signal. In the body example of the table above, only users subscribed to Session.on('signal:MY_TYPE') will trigger that signal. Users subscribed to Session.on('signal') will trigger signals of any type.
+        :param type_: Type of the signal. In the body example of the table above,
+                      only users subscribed to Session.on('signal:MY_TYPE') will trigger that signal.
+                      Users subscribed to Session.on('signal') will trigger signals of any type.
         :param data: Actual data of the signal.
         """
         if not self.is_valid:
@@ -157,11 +168,14 @@ class OpenViduConnection(object):
 
     def force_unpublish_all_streams(self):
         """
-        Forces the user to unpublish all of their Stream. OpenVidu Browser will trigger the proper events on the client-side (streamDestroyed) with reason set to "forceUnpublishByServer".
+        Forces the user to unpublish all of their Stream.
+        OpenVidu Browser will trigger the proper events on
+        the client-side (streamDestroyed) with reason set to "forceUnpublishByServer".
         After this call, the instace of the object, should be considered invalid.
-        Remember to call fetch() after this call to fetch the current actual properties of the Session from OpenVidu Server!
+        Remember to call fetch() after this call to fetch the current
+        actual properties of the Session from OpenVidu Server!
 
-        https://docs.openvidu.io/en/2.16.0/reference-docs/REST-API/#delete-openviduapisessionsltsession_idgtstreamltstream_idgt
+        https://docs.openvidu.io/en/2.20.0/reference-docs/REST-API/#delete-session
         """
         if not self.is_valid:
             raise OpenViduConnectionDoesNotExistsError()
@@ -178,7 +192,8 @@ class OpenViduConnection(object):
         return len(self.subscribers)
 
 
-# Notice: Frozen should be changed to True in later versions of Python3 where a nice method for custom initializer is implemented
+# Notice: Frozen should be changed to True in later versions of Python3
+# where a nice method for custom initializer is implemented
 @dataclass(init=False, frozen=False)
 class OpenViduWEBRTCConnection(OpenViduConnection):
     """
@@ -199,7 +214,8 @@ class OpenViduWEBRTCConnection(OpenViduConnection):
         self.kurento_options = data['kurentoOptions']
 
 
-# Notice: Frozen should be changed to True in later versions of Python3 where a nice method for custom initializer is implemented
+# Notice: Frozen should be changed to True in later versions of Python3
+# where a nice method for custom initializer is implemented
 @dataclass(init=False, frozen=False)
 class OpenViduIPCAMConnection(OpenViduConnection):
     """

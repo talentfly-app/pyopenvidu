@@ -28,7 +28,7 @@ class OpenViduSession(object):
         elif connection_info['type'] == 'IPCAM':
             return OpenViduIPCAMConnection(self._session, connection_info)
         else:
-            raise RuntimeError("Unknown connection type")
+            raise RuntimeError('Unknown connection type')
 
     def __update_from_data(self, data: dict):
         self.id = data['id']
@@ -44,25 +44,33 @@ class OpenViduSession(object):
         self.connections = connections
         self.is_valid = True
 
-    def __init__(self, session: BaseUrlSession, data: dict):
+    def __init__(
+        self,
+        session: BaseUrlSession,
+        data: dict,
+        verify_request_ssl: bool = True
+    ) -> None:
         """
         This is meant for internal use, thus you should not call it.
         Use `OpenVidu.get_session` to get an instance of this class.
         """
 
         self._session = session
-
+        self._session.verify = verify_request_ssl
         self.__update_from_data(data)
         self._last_fetch_result = data
 
     def fetch(self):
         """
-        Updates every property of the OpenViduSession with the current status it has in OpenVidu Server. This is especially useful for getting the list of active connections to the OpenViduSession trough the `connections` property.
+        Updates every property of the OpenViduSession with the current status it has in OpenVidu Server.
+        This is especially useful for getting the list of active connections
+        to the OpenViduSession trough the `connections` property.
 
-        :return: True if the OpenViduSession status has changed with respect to the server, False if not. This applies to any property or sub-property of the object
+        :return: True if the OpenViduSession status has changed with respect to the server,
+                 False if not. This applies to any property or sub-property of the object
         """
 
-        r = self._session.get(f"sessions/{self.id}")
+        r = self._session.get(f'sessions/{self.id}')
 
         if r.status_code == 404:
             self.is_valid = False
@@ -85,7 +93,7 @@ class OpenViduSession(object):
         Further calls to this object will fail.
         """
 
-        r = self._session.delete(f"sessions/{self.id}")
+        r = self._session.delete(f'sessions/{self.id}')
 
         if r.status_code == 404:
             self.is_valid = False
@@ -108,16 +116,24 @@ class OpenViduSession(object):
 
         raise OpenViduConnectionDoesNotExistsError()
 
-    def signal(self, type_: str = None, data: str = None, to: Optional[List[OpenViduConnection]] = None):
+    def signal(
+        self,
+        type_: str = None,
+        data: str = None,
+        to: Optional[List[OpenViduConnection]] = None
+    ) -> None:
         """
         Sends a signal to all participants in the session or specific connections if the `to` property defined.
         OpenViduConnection objects also implement this method.
 
-        https://docs.openvidu.io/en/2.16.0/reference-docs/REST-API/#post-openviduapisignal
+        https://docs.openvidu.io/en/2.20.0/reference-docs/REST-API/#post-signal
 
-        :param type_: Type of the signal. In the body example of the table above, only users subscribed to Session.on('signal:MY_TYPE') will trigger that signal. Users subscribed to Session.on('signal') will trigger signals of any type.
+        :param type_: Type of the signal. In the body example of the table above,
+                      only users subscribed to Session.on('signal:MY_TYPE') will trigger that signal.
+                      Users subscribed to Session.on('signal') will trigger signals of any type.
         :param data: Actual data of the signal.
-        :param to: List of OpenViduConnection objects to which you want to send the signal. If this property is not set (None) the signal will be sent to all participants of the session.
+        :param to: List of OpenViduConnection objects to which you want to send the signal.
+                   If this property is not set (None) the signal will be sent to all participants of the session.
         """
 
         if not self.is_valid:  # Fail early... and always
@@ -129,10 +145,10 @@ class OpenViduSession(object):
             recipient_list = None
 
         parameters = {
-            "session": self.id,
-            "to": recipient_list,
-            "type": type_,
-            "data": data
+            'session': self.id,
+            'to': recipient_list,
+            'type': type_,
+            'data': data
         }
 
         parameters = {k: v for k, v in parameters.items() if v is not None}
@@ -164,24 +180,36 @@ class OpenViduSession(object):
 
         return r.json()
 
-    def create_webrtc_connection(self, role: str = 'PUBLISHER', data: str = None, video_max_recv_bandwidth: int = None,
-                                 video_min_recv_bandwidth: int = None, video_max_send_bandwidth: int = None,
-                                 video_min_send_bandwidth: int = None,
-                                 allowed_filters: list = None) -> OpenViduWEBRTCConnection:
+    def create_webrtc_connection(
+        self,
+        role: str = 'PUBLISHER',
+        data: str = None,
+        video_max_recv_bandwidth: int = None,
+        video_min_recv_bandwidth: int = None,
+        video_max_send_bandwidth: int = None,
+        video_min_send_bandwidth: int = None,
+        allowed_filters: list = None
+    ) -> OpenViduWEBRTCConnection:
         """
         Creates a new Connection object of WEBRTC (Regular user) type to the session.
 
-        In the video bandwidth settings 0 means unconstrained. Setting any of them (other than None) overrides the values configured in for the server.
+        In the video bandwidth settings 0 means unconstrained.
+        Setting any of them (other than None) overrides the values configured in for the server.
 
-        https://docs.openvidu.io/en/2.16.0/reference-docs/REST-API/#post-openviduapisessionsltsession_idgtconnection
+        https://docs.openvidu.io/en/2.20.0/reference-docs/REST-API/#post-connection
 
         :param role: Allowed values: `SUBSCRIBER`, `PUBLISHER` or `MODERATOR`
         :param data: metadata associated to this token (usually participant's information)
-        :param video_max_recv_bandwidth: Maximum number of Kbps that the client owning the token will be able to receive from Kurento Media Server.
-        :param video_min_recv_bandwidth: Minimum number of Kbps that the client owning the token will try to receive from Kurento Media Server.
-        :param video_max_send_bandwidth: Maximum number of Kbps that the client owning the token will be able to send to Kurento Media Server.
-        :param video_min_send_bandwidth: Minimum number of Kbps that the client owning the token will try to send to Kurento Media Server.
-        :param allowed_filters: Array of strings containing the names of the filters the user owning the token will be able to apply.
+        :param video_max_recv_bandwidth: Maximum number of Kbps that the client owning the token
+                                         will be able to receive from Kurento Media Server.
+        :param video_min_recv_bandwidth: Minimum number of Kbps that the client owning the token
+                                         will try to receive from Kurento Media Server.
+        :param video_max_send_bandwidth: Maximum number of Kbps that the client owning the token
+                                         will be able to send to Kurento Media Server.
+        :param video_min_send_bandwidth: Minimum number of Kbps that the client owning the token
+                                         will try to send to Kurento Media Server.
+        :param allowed_filters: Array of strings containing the names of the filters
+                                the user owning the token will be able to apply.
         :return: An OpenVidu connection object represents the newly created connection.
         """
 
@@ -190,23 +218,23 @@ class OpenViduSession(object):
 
         # Prepare parameters
 
-        if role not in ['SUBSCRIBER', 'PUBLISHER', 'MODERATOR']:
-            raise ValueError(f"Role must be any of SUBSCRIBER, PUBLISHER or MODERATOR, not {role}")
+        if role not in ('SUBSCRIBER', 'PUBLISHER', 'MODERATOR'):
+            raise ValueError(f'Role must be any of SUBSCRIBER, PUBLISHER or MODERATOR, not {role}')
 
         parameters = {
-            "type": "WEBRTC",
-            "role": role
+            'type': 'WEBRTC',
+            'role': role
         }
 
         if data:
             parameters['data'] = data
 
         kurento_options = {
-            "videoMaxRecvBandwidth": video_max_recv_bandwidth,
-            "videoMinRecvBandwidth": video_min_recv_bandwidth,
-            "videoMaxSendBandwidth": video_max_send_bandwidth,
-            "videoMinSendBandwidth": video_min_send_bandwidth,
-            "allowedFilters": allowed_filters
+            'videoMaxRecvBandwidth': video_max_recv_bandwidth,
+            'videoMinRecvBandwidth': video_min_recv_bandwidth,
+            'videoMaxSendBandwidth': video_max_send_bandwidth,
+            'videoMinSendBandwidth': video_min_send_bandwidth,
+            'allowedFilters': allowed_filters
         }
 
         kurento_options = {k: v for k, v in kurento_options.items() if v is not None}
@@ -219,16 +247,23 @@ class OpenViduSession(object):
         self.connections.append(new_connection)
         return new_connection
 
-    def create_ipcam_connection(self, rtsp_uri: str, data: str = None, adaptive_bitrate: bool = None,
-                                only_play_with_subscribers: bool = None,
-                                network_cache: int = None) -> OpenViduIPCAMConnection:
+    def create_ipcam_connection(
+        self,
+        rtsp_uri: str,
+        data: str = None,
+        adaptive_bitrate: bool = None,
+        only_play_with_subscribers: bool = None,
+        network_cache: int = None
+    ) -> OpenViduIPCAMConnection:
         """
         Publishes a new IPCAM rtsp stream to the session.
 
-        Unlike `OpenVidu.create_session` this method does not call fetch() automatically, since the server returns enough data to construct the connection object.
-        Keep in mind, that if you want the newly created Connection to appear in the `connections` list, you should call fetch() before accessing the list!
+        Unlike `OpenVidu.create_session` this method does not call fetch() automatically,
+        since the server returns enough data to construct the connection object.
+        Keep in mind, that if you want the newly created Connection to appear in the `connections` list,
+        you should call fetch() before accessing the list!
 
-        https://docs.openvidu.io/en/2.16.0/reference-docs/REST-API/#post-openviduapisessionsltsession_idgtconnection
+        https://docs.openvidu.io/en/2.20.0/reference-docs/REST-API/#post-connection
 
         :param rtsp_uri: RTSP URI of the IP camera. For example: `rtsp://your.camera.ip:7777/path`.
         :param data: Metadata you want to associate to the camera's participant.
@@ -242,12 +277,12 @@ class OpenViduSession(object):
             raise OpenViduSessionDoesNotExistsError()
 
         parameters = {
-            "type": "IPCAM",
-            "data": data,
-            "rtspUri": rtsp_uri,
-            "adaptativeBitrate": adaptive_bitrate,
-            "onlyPlayWithSubscribers": only_play_with_subscribers,
-            "networkCache": network_cache
+            'type': 'IPCAM',
+            'data': data,
+            'rtspUri': rtsp_uri,
+            'adaptativeBitrate': adaptive_bitrate,
+            'onlyPlayWithSubscribers': only_play_with_subscribers,
+            'networkCache': network_cache
         }
 
         parameters = {k: v for k, v in parameters.items() if v is not None}
