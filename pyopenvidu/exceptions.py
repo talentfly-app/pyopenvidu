@@ -1,12 +1,9 @@
 # Base exception
-
-
 class OpenViduError(BaseException):
     pass
 
 
 # Session errors
-
 class OpenViduSessionError(OpenViduError):
     pass
 
@@ -20,7 +17,6 @@ class OpenViduSessionExistsError(OpenViduSessionError):
 
 
 # Connection errors
-
 class OpenViduConnectionError(OpenViduSessionError):
     pass
 
@@ -30,7 +26,6 @@ class OpenViduConnectionDoesNotExistsError(OpenViduConnectionError):
 
 
 # Stream errors
-
 class OpenViduStreamError(OpenViduConnectionError):
     pass
 
@@ -38,8 +33,8 @@ class OpenViduStreamError(OpenViduConnectionError):
 class OpenViduStreamDoesNotExistsError(OpenViduStreamError):
     pass
 
-# Recording errors
 
+# Recording errors
 class OpenViduRecordingError(OpenViduSessionError):
     pass
 
@@ -47,12 +42,14 @@ class OpenViduRecordingError(OpenViduSessionError):
 class OpenViduRecordingDoesNotExistsError(OpenViduRecordingError):
     pass
 
+
 class OpenViduRecordingNotStoppedError(OpenViduRecordingError):
     pass
+
 
 class OpenViduRecordingNotEnabledError(OpenViduRecordingError):
     pass
 
+
 class OpenViduRecordingNotStartedError(OpenViduRecordingError):
     pass
-

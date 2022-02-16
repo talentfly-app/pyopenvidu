@@ -1,5 +1,5 @@
 """OpenVidu class."""
-from typing import List, Union
+from typing import List, Union, Optional
 from functools import partial
 
 from requests_toolbelt.sessions import BaseUrlSession
@@ -106,7 +106,24 @@ class OpenVidu(object):
 
         return session
 
-    def create_session(self, custom_session_id: str = None, media_mode: str = None) -> OpenViduSession:
+    def create_session(
+        self,
+        media_mode: str = 'ROUTED',
+        recording_mode: str = 'MANUAL',
+        custom_session_id: Optional[str] = None,
+        forced_video_codec: str = 'VP8',
+        allow_transcoding: bool = False,
+        media_node_id: Optional[str] = None,
+        default_recording_name: Optional[str] = None,
+        default_recording_has_audio: bool = True,
+        default_recording_has_video: bool = True,
+        default_recording_output_mode: str = 'COMPOSED',
+        default_recording_layout: str = 'BEST_FIT',
+        default_recording_resolution: str = '1280x720',
+        default_recording_framerate: int = 25,
+        default_recording_shm_size: int = 536870912,
+        default_recording_media_node_id: Optional[str] = None
+    ) -> OpenViduSession:
         """
         Creates a new OpenVidu session.
 
@@ -117,13 +134,54 @@ class OpenVidu(object):
 
         :param custom_session_id: You can fix the sessionId that will be assigned to the session with this parameter.
         :param media_mode: ROUTED (default) or RELAYED
+        :param recording_mode: MANUAL (default) or ALWAYS
+        :param forced_video_codec: VP8 (default) or H264 or None
+        :param allow_transcoding: False (default) or True
+        :param media_node_id: Media node id (PRO Subscription)
+        :param default_recording_name: None (default) or str
+        :param default_recording_has_audio: True (default) or False
+        :param default_recording_has_video: True (default) or False
+        :param default_recording_output_mode: COMPOSED (default) or COMPOSED_QUICK_START or INDIVIDUAL
+        :param default_recording_layout: BEST_FIT (default) or CUSTOM
+        :param default_recording_resolution: 1280x720 (default) or another
+        :param default_recording_framerate: 25 (default) or another
+        :param default_recording_shm_size: 536870912 (default) or another
+        :param default_recording_media_node_id: Media node id (PRO Subscription)
+
         :return: The created OpenViduSession instance.
         """
-        # Prepare parameters
-        if media_mode not in ('ROUTED', 'RELAYED', None):
-            raise ValueError(f'media_mode must be any of ROUTED or RELAYED, not {media_mode}')
 
-        parameters = {'mediaMode': media_mode, 'customSessionId': custom_session_id}
+        parameters: dict = {
+            'mediaMode': media_mode,
+            'recordingMode': recording_mode,
+            'customSessionId': custom_session_id,
+            'forcedVideoCodec': forced_video_codec,
+            'allowTranscoding': allow_transcoding,
+            'defaultRecordingProperties': {
+                'name': default_recording_name,
+                'hasAudio': default_recording_has_audio,
+                'hasVideo': default_recording_has_video,
+                'outputMode': default_recording_output_mode,
+                'recordingLayout': default_recording_layout,
+                'resolution': default_recording_resolution,
+                'frameRate': default_recording_framerate,
+                'shmSize': default_recording_shm_size
+            }
+        }
+
+        if media_node_id:
+            parameters['mediaNode'] = {
+                'id': media_node_id
+            }
+
+        if default_recording_media_node_id:
+            parameters['defaultRecordingProperties']['mediaNode'] = {
+                'id': default_recording_media_node_id
+            }
+
+        # TODO: Add parameters validation
+
+        # clean keys with None values
         parameters = {k: v for k, v in parameters.items() if v is not None}
 
         # send request
@@ -180,26 +238,50 @@ class OpenVidu(object):
 
         return r.json()
 
-    def create_recording(self, session_id, options: dict = None) -> OpenViduRecording:
+    def create_recording(
+        self,
+        session_id,
+        name: Optional[str] = None,
+        has_audio: bool = True,
+        has_video: bool = True,
+        output_mode: str = 'COMPOSED',
+        recording_layout: str = 'BEST_FIT',
+        custom_layout: Optional[str] = None,
+        resolution: str = '1280x720',
+        framerate: int = 25,
+        shm_size: int = 536870912,
+        ignore_failed_streams: bool = True,
+        media_node_id: Optional[str] = None
+    ) -> OpenViduRecording:
         """
         Start recording
 
         https://docs.openvidu.io/en/2.20.0/reference-docs/REST-API/#post-recording-start
 
         """
-        options = options if options else {}
         session = self.get_session(session_id)
+
         parameters = {
             'session': session_id,
-            'name': 'MyRecording',
-            'hasAudio': True,
-            'hasVideo': True,
-            'outputMode': 'INDIVIDUAL',  # "COMPOSED",
-            'resolution': '640x480',
-            'frameRate': 25,
-            'ignoreFailedStreams': True,
+            'name': name,
+            'hasAudio': has_audio,
+            'hasVideo': has_video,
+            'outputMode': output_mode,
+            'recordingLayout': recording_layout,
+            'customLayout': custom_layout,
+            'resolution': resolution,
+            'frameRate': framerate,
+            'shmSize': shm_size,
+            'ignoreFailedStreams': ignore_failed_streams,
+        }
+
+        if media_node_id:
+            parameters['mediaNode'] = {
+                'id': media_node_id
             }
-        parameters.update(options)
+
+        # TODO: Add parameters validation
+
         r = self._session.post(f'recordings/start', json=parameters)
 
         if r.status_code == 404:
